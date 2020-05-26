@@ -47,7 +47,7 @@ __global__ void lutKernel2D(sImage2d image, Positions2d pos, sPSF psf,
     // Condition for valid work
     if (idx < image.width && idy < image.height) {
         pixel = 0;
-        for (int i = 0; i < pos.n; i+=2){
+        for (int i = 0; i < pos.n; i++){
             px = (float) (idx-shared[i*2]) * factor_x + 0.5;
             py = (float) (idy-shared[i*2+1]) * factor_y + 0.5;
             pixel += tex2D<float>(texPSF, px, py);
