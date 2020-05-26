@@ -39,7 +39,7 @@ __global__ void lutKernel2D(sImage2d image, Positions2d pos, sPSF psf,
     // Condition for valid work
     if (idx < image.width && idy < image.height) {
         pixel = 0;
-        for (int i = 0; i < pos.n; i+=2){
+        for (int i = 0; i < pos.n; i++){
             px = idx-shared[i*2];
             py = idy-shared[i*2+1];
             r2 = px*px + py*py;
