@@ -1,4 +1,4 @@
-BIN = ./bin/
+BIN = ../bin/
 NVCC_FLAGS = -rdc=true
 NVCC_XFLAGS = -Xcompiler -fPIC -shared
 COMMON_FILES = textures.cu lutConvolutionLauncher.cu
