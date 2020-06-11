@@ -153,7 +153,6 @@ if __name__ == '__main__':
     x_psf -= psf_size[0] // 2
     y_psf -= psf_size[1] // 2
 
-    image = np.zeros(convolution_size[::-1], dtype=c_float)
     pos = np.asarray(np.random.rand(n_sources, 2) * convolution_size, dtype=c_float)
     psf = np.exp(-(x_psf ** 2 + y_psf ** 2) / sigma ** 2 / 2, dtype=c_float)
 
@@ -169,6 +168,6 @@ if __name__ == '__main__':
     convolution.launch()
 
     plt.imshow(convolution.image)
-    plt.plot(pos[:, 0], pos[:, 1], 'g.')
+    plt.plot(pos[:, 0], pos[:, 1], color='k', ls='', marker='.', markersize=1.0)
     plt.show()
 
