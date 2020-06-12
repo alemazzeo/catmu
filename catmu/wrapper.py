@@ -141,7 +141,12 @@ class ConvolveLibrary:
 
         r = self._lib.lutConvolution2D(_image, _positions, _psf, 0)
         if r != 0:
-            raise RuntimeError(f'lutConvolution2D return error code: {r}')
+            if r == 100:
+                raise RuntimeError('No se encontró ninguna GPU disponible en el sistema\n\n'
+                                   'Verifique el estado del dispositivo y su driver ejecutando:\n'
+                                   'nvidia-smi')
+            else:
+                raise RuntimeError(f'lutConvolution2D return error code: {r}')
 
 
 if __name__ == '__main__':
@@ -161,7 +166,7 @@ if __name__ == '__main__':
                                   image_size=convolution_size,
                                   image_pixel_size=image_pixel,
                                   psf_pixel_size=psf_pixel,
-                                  debug=True)
+                                  debug=False)
 
     convolution.positions = pos
     convolution.psf = psf
