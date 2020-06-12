@@ -8,6 +8,8 @@ from catmu.structures import (sImage2d, sPositions2d, sPSF)
 
 __here__ = pathlib.Path(__file__).parent
 
+MAKE_COMMAND = f'make -C {__here__ / "cuda_sources"} all'
+
 
 class ConvolveLibrary:
     def __init__(self, kernel: str = 'v0_1',
@@ -42,8 +44,10 @@ class ConvolveLibrary:
         if self._kernel.exists() is False:
             raise FileNotFoundError(f'No se encontró el kernel {self._kernel}')
         if self._lib_name.exists() is False:
-            raise FileNotFoundError(f'La biblioteca {self._lib_name} no fue compilada. '
-                                    f'Ejecute `make all` en el directorio {__here__}.')
+            import subprocess
+            subprocess.run(MAKE_COMMAND, shell=True)
+            if self._lib_name.exists() is False:
+                raise FileNotFoundError(f'La biblioteca {self._lib_name} no pudo ser compilada.')
 
         self._lib = CDLL(self._lib_name)
 
@@ -142,6 +146,7 @@ class ConvolveLibrary:
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
+    from catmu.analysis_tools import make_gaussian_psf_lut, make_random_positions
     convolution_size = (64, 64)
     image_pixel = (1.0, 1.0)
     psf_pixel = (1.0, 1.0)
@@ -149,12 +154,8 @@ if __name__ == '__main__':
     n_sources = 6000
     sigma = 2.0
 
-    x_psf, y_psf = np.mgrid[0:psf_size[0], 0:psf_size[1]]
-    x_psf -= psf_size[0] // 2
-    y_psf -= psf_size[1] // 2
-
-    pos = np.asarray(np.random.rand(n_sources, 2) * convolution_size, dtype=c_float)
-    psf = np.exp(-(x_psf ** 2 + y_psf ** 2) / sigma ** 2 / 2, dtype=c_float)
+    pos = make_random_positions(n_sources=n_sources, convolution_size=convolution_size)
+    psf = make_gaussian_psf_lut(psf_size=psf_size, sigma=sigma)
 
     convolution = ConvolveLibrary(kernel='v0_1',
                                   image_size=convolution_size,
