@@ -32,7 +32,7 @@ class ConvolveLibrary:
 
         """
 
-        self._kernel = pathlib.Path(__here__ / f'./kernel_{kernel}.cu')
+        self._kernel = pathlib.Path(__here__ / f'./cuda_sources/kernel_{kernel}.cu')
 
         if debug is True:
             self._lib_name = pathlib.Path(__here__ / f'./bin/libConvolveLUT_D_{kernel}.so')
