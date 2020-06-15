@@ -35,7 +35,7 @@ def convolve_guassian_psf(positions: np.ndarray, sigma: float = 2.0) -> np.ndarr
 
 
 def load_measured_psf() -> MeasuredPSF:
-    data = np.load(__file__.replace('analysis_tools.py', 'measured_psf.npz')
+    data = np.load(__file__.replace('analysis_tools.py', 'measured_psf.npz'))
 
     def gaussian_fit(x, y):
         return data['amplitude'] * np.exp(-(x ** 2 + y ** 2) / data['sigma2'] / 2) + data['offset']
