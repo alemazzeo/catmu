@@ -1,5 +1,14 @@
+
+from typing import Tuple, NamedTuple
 import numpy as np
-from typing import Tuple
+
+
+class MeasuredPSF(NamedTuple):
+    lut: np.ndarray
+    amplitude: float
+    sigma2: float
+    offset: float
+    gaussian_fit: callable
 
 
 def make_gaussian_psf_lut(psf_size: Tuple[int, int], sigma: float = 2.0) -> np.ndarray:
@@ -23,6 +32,19 @@ def convolve_guassian_psf(positions: np.ndarray, sigma: float = 2.0) -> np.ndarr
         exact_image += displaced_psf
 
     return exact_image
+
+
+def load_measured_psf() -> MeasuredPSF:
+    data = np.load(__file__.replace('analysis_tools.py', 'measured_psf.npz')
+
+    def gaussian_fit(x, y):
+        return data['amplitude'] * np.exp(-(x ** 2 + y ** 2) / data['sigma2'] / 2) + data['offset']
+
+    return MeasuredPSF(lut=data['lut'],
+                       amplitude=data['amplitude'],
+                       sigma2=data['sigma2'],
+                       offset=data['offset'],
+                       gaussian_fit=gaussian_fit)
 
 
 if __name__ == '__main__':
