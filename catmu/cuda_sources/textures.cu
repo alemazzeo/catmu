@@ -38,7 +38,7 @@ int set_texture2d(cudaArray * cuArray, sPSF * psf,
     texDesc.addressMode[1]   = cudaAddressModeBorder;
     texDesc.filterMode       = cudaFilterModeLinear;
     texDesc.readMode         = cudaReadModeElementType;
-    texDesc.normalizedCoords = normalized;
+    texDesc.normalizedCoords = 0;
     CUDA_CHECK_ERROR(return err);
 
     info_print("Create texture object\n");
