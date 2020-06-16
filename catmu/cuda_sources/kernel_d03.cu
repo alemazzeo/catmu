@@ -20,8 +20,8 @@ __global__ void lutKernel2D(sImage2d image, Positions2d pos, sPSF psf,
 
     // Condition for valid work
     if (idx < image.width && idy < image.height) {
-        float px = ((float) idx / (image.width - 1) + pos.data[0]) * (psf.width - 1) + 0.5;
-        float py = ((float) idy / (image.height - 1) + pos.data[1]) * (psf.height - 1) + 0.5;
+        float px = ((float) (idx + pos.data[0]) / (image.width - 1) ) * (psf.width - 1) + 0.5;
+        float py = ((float) (idy + pos.data[1]) / (image.height - 1)) * (psf.height - 1) + 0.5;
         image.data[idy * image.width + idx] = tex2D<float>(texPSF, px, py);
     }
 }
