@@ -4,10 +4,13 @@ import numpy as np
 
 
 class MeasuredPSF(NamedTuple):
-    lut: np.ndarray
+    x: np.ndarray
+    y: np.ndarray
+    z: np.ndarray
     amplitude: float
     sigma2: float
     offset: float
+    rmse: float
     gaussian_fit: callable
 
 
@@ -40,10 +43,13 @@ def load_measured_psf() -> MeasuredPSF:
     def gaussian_fit(x, y):
         return data['amplitude'] * np.exp(-(x ** 2 + y ** 2) / data['sigma2'] / 2) + data['offset']
 
-    return MeasuredPSF(lut=data['lut'],
+    return MeasuredPSF(x=data['x'],
+                       y=data['y'],
+                       z=data['z'],
                        amplitude=data['amplitude'],
                        sigma2=data['sigma2'],
                        offset=data['offset'],
+                       rmse=data['rmse'],
                        gaussian_fit=gaussian_fit)
 
 
