@@ -54,26 +54,14 @@ def tex2d(x: float, y: float, psf: np.ndarray):
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
-    # psf_lut = np.arange(9).reshape((3, 3))
-    # n = 100
-    # x, y = 2 * np.mgrid[0:n + 1, 0:n + 1] / n - 0.5
-    # print(x, y)
-    # texture_applied = tex2d(x=x, y=y, psf=psf_lut)
-    # print(texture_applied)
-    # _, (ax1, ax2) = plt.subplots(1, 2)
-    # ax1.imshow(psf_lut, extent=(0, 1, 0, 1), vmin=np.min(psf_lut), vmax=np.max(psf_lut))
-    # ax2.imshow(texture_applied, vmin=np.min(psf_lut), vmax=np.max(psf_lut),
-    #            extent=(np.min(x), np.max(x), np.min(y), np.max(y)))
-    # plt.show()
-
-    n = 100
-    pad = 3
+    n = 11
+    pad = 0
 
     psf = np.pad(np.ones((11, 11)), pad_width=pad, mode='constant', constant_values=0)
 
     y, x = np.mgrid[0:n * (psf.shape[0]), 0:n * (psf.shape[1])] / n
 
-    plt.imshow(tex2d(x, y, psf), extent=(x.min(), x.max(), y.min(), y.max()))
+    plt.imshow(tex2d(x, y, psf), extent=(x.min(), x.max(), y.min(), y.max()), cmap='Spectral_r')
 
     for i in range(psf.shape[0]):
         if i == pad or i == psf.shape[0] - pad:
