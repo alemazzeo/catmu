@@ -11,11 +11,14 @@ __here__ = pathlib.Path(__file__).parent
 MAKE_COMMAND = f'make -C {__here__ / "cuda_sources"} all'
 
 
-class ConvolveLibrary:
+class ConvolveLibraryMultiple:
     def __init__(self,
                  image_size: Tuple[int, int] = (64, 64),
                  image_pixel_size: Tuple[float, float] = (1.0, 1.0),
                  psf_pixel_size: Tuple[float, float] = (1.0, 1.0),
+                 subpixel: int = 1,
+                 block_size: int = 8,
+                 device: int = 0,
                  debug: bool = False):
         """
 
@@ -60,6 +63,10 @@ class ConvolveLibrary:
         self.image_size = image_size
         self.image_pixel_size = image_pixel_size
         self.psf_pixel_size = psf_pixel_size
+
+        self._subpixel = subpixel
+        self._block_size = block_size
+        self._device = device
 
     @property
     def kernel_name(self) -> str:
@@ -143,7 +150,7 @@ class ConvolveLibrary:
                            pixel_width=self._psf_pixel_size[1],
                            pixel_height=self._psf_pixel_size[0])
 
-        r = self._lib.lutConvolution2D(_image, _positions, _psf, n, 1, 0)
+        r = self._lib.lutConvolution2D(_image, _positions, _psf, n, self._subpixel, self._block_size, self._device)
         if r != 0:
             if r == 100:
                 raise RuntimeError('No se encontró ninguna GPU disponible en el sistema\n\n'
@@ -156,6 +163,7 @@ class ConvolveLibrary:
 if __name__ == '__main__':
     # import matplotlib.pyplot as plt
     from catmu.analysis_tools import make_gaussian_psf_lut, make_n_random_positions
+    import time
 
     convolution_size = (8, 8)
     image_pixel = (1.0, 1.0)
@@ -167,16 +175,19 @@ if __name__ == '__main__':
     pos = make_n_random_positions(n=100, n_sources=n_sources, convolution_size=(8, 8))
     psf = make_gaussian_psf_lut(psf_size=psf_size, sigma=sigma)
 
-    convolution = ConvolveLibrary(image_size=convolution_size,
-                                  image_pixel_size=image_pixel,
-                                  psf_pixel_size=psf_pixel,
-                                  debug=False)
+    convolution = ConvolveLibraryMultiple(image_size=convolution_size,
+                                          image_pixel_size=image_pixel,
+                                          psf_pixel_size=psf_pixel,
+                                          subpixel=1,
+                                          block_size=8,
+                                          debug=False)
 
     convolution.positions = pos
     convolution.psf = psf
 
+    t = time.time()
     convolution.launch()
-
+    print(f'{(time.time() - t) * 1000}mS')
     # plt.imshow(convolution.image[5])
     # plt.plot(pos[5][:, 0], pos[5][:, 1], color='k', ls='', marker='.', markersize=1.0)
     # plt.show()

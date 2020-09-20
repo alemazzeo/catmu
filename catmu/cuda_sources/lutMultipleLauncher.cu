@@ -63,7 +63,7 @@ int free_device_memory(sImage2d * d_image, Positions2d * d_pos,
 
 extern "C" {
 int lutConvolution2D(sImage2d * h_image, Positions2d * h_pos, sPSF * h_psf, int N,
-                     int subpixel, int device){
+                     int subpixel, int block_size, int device){
     int r = 0;
 
     cudaArray * cuArray = 0;
@@ -137,9 +137,9 @@ int lutConvolution2D(sImage2d * h_image, Positions2d * h_pos, sPSF * h_psf, int 
     CUDA_CHECK_ERROR(return err);
 
     info_print("Grid and block sizes:\n");
-    dim3 dimBlock(8, 8);
-    dim3 dimGrid((h_image->width  + dimBlock.x - 1) / dimBlock.x,
-                 (h_image->height + dimBlock.y - 1) / dimBlock.y);
+    dim3 dimBlock(block_size, block_size);
+    dim3 dimGrid((h_image->width / subpixel  + dimBlock.x - 1) / dimBlock.x,
+                 (h_image->height / subpixel + dimBlock.y - 1) / dimBlock.y);
 
     info_print("dimGrid: %dx%d\n", dimGrid.x, dimGrid.y);
     info_print("dimBlock: %dx%d\n", dimBlock.x, dimBlock.y);
