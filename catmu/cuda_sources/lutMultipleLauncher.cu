@@ -1,7 +1,7 @@
 #include "convolution_lut.h"
 
 __global__ void lutKernel2D(int sub_pixel, sImage2d image, Positions2d pos, sPSF psf,
-                            cudaTextureObject_t texPSF){
+                            cudaTextureObject_t texPSF, int offset_image, int offset_position){
 
     // Worker ID
     size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -24,11 +24,11 @@ __global__ void lutKernel2D(int sub_pixel, sImage2d image, Positions2d pos, sPSF
             if (idx < image.width && idy < image.height) {
                 pixel = 0;
                 for (int i = 0; i < pos.n; i++){
-                    px = (x-pos.data[i*2]) * factor_x + center_x;
-                    py = (y-pos.data[i*2+1]) * factor_y + center_y;
+                    px = (x-pos.data[offset_position + i*2]) * factor_x + center_x;
+                    py = (y-pos.data[offset_position + i*2+1]) * factor_y + center_y;
                     pixel += tex2D<float>(texPSF, px, py);
                 }
-                image.data[idy * image.width + idx] = pixel;
+                image.data[offset_image + idy * image.width + idx] = pixel;
             }
         }
     }
@@ -74,12 +74,9 @@ int lutConvolution2D(sImage2d * h_image, Positions2d * h_pos, sPSF * h_psf, int 
     size_t result_size;
     size_t pos_size;
 
+    sImage2d d_image;
+    sPositions2d d_pos;
 
-    sImage2d * d_image;
-    sPositions2d * d_pos;
-
-    d_image = (sImage2d *) malloc(N * sizeof(sImage2d));
-    d_pos = (sPositions2d *) malloc(N * sizeof(Positions2d));
     stream = (cudaStream_t *) malloc(N * sizeof(cudaStream_t));
     
     info_print("Setting device\n");
@@ -105,72 +102,78 @@ int lutConvolution2D(sImage2d * h_image, Positions2d * h_pos, sPSF * h_psf, int 
         info_print("Stream %d created\n", i);
     }
 
-    info_print("Allocating images and positions with metadata\n");
-    for (int i=0; i<N; i++){
-        info_print("Image %d of %d\n", i+1, N);
-        info_print("Input parameters:\n");
-        info_print("image[%d].width = %d\n", i, h_image[i].width);
-        info_print("image[%d].height = %d\n", i, h_image[i].height);
-        info_print("image[%d].pixel_width = %f\n", i, h_image[i].pixel_width);
-        info_print("image[%d].pixel_height = %f\n", i, h_image[i].pixel_height);
+    info_print("Allocating images and positions metadata\n");
 
-        info_print("pos[%d].n = %d\n", i, h_pos[i].n);
-        info_print("pos[%d].data[0] = %f\n", i, h_pos[i].data[0]);
-        info_print("pos[%d].data[1] = %f\n", i, h_pos[i].data[1]);
+    info_print("Input parameters:\n");
+    info_print("image->width = %d\n", h_image->width);
+    info_print("image->height = %d\n", h_image->height);
+    info_print("image->pixel_width = %f\n", h_image->pixel_width);
+    info_print("image->pixel_height = %f\n", h_image->pixel_height);
 
-        info_print("Allocating memory for result in device\n");
+    info_print("pos->n = %d\n", h_pos->n);
+    info_print("pos->data[0] = %f\n", h_pos->data[0]);
+    info_print("pos->data[1] = %f\n", h_pos->data[1]);
 
-        d_image[i].width = h_image[i].width;
-        d_image[i].height = h_image[i].height;
-        d_image[i].pixel_width = h_image[i].pixel_width;
-        d_image[i].pixel_height = h_image[i].pixel_height;
+    info_print("Allocating memory for result in device\n");
 
-        result_size = h_image[i].width * h_image[i].height * sizeof(float);
-        info_print("Allocated %ld bytes on %p (device)\n",
-                   result_size, d_image[i].data);
-        cudaMalloc(&d_image[i].data, result_size);
-        CUDA_CHECK_ERROR(return err);
-        info_print("Allocated %ld bytes on %p (device)\n",
-                   result_size, d_image[i].data);
+    d_image.width = h_image->width;
+    d_image.height = h_image->height;
+    d_image.pixel_width = h_image->pixel_width;
+    d_image.pixel_height = h_image->pixel_height;
 
-        info_print("Allocating memory for positions coordinates in device\n");
+    result_size = h_image->width * h_image->height * sizeof(float);
+    info_print("Allocated %ld bytes on %p (device)\n",
+               result_size, d_image.data);
+    cudaMalloc(&d_image.data, result_size * N);
+    CUDA_CHECK_ERROR(return err);
+    info_print("Allocated %ld bytes on %p (device)\n",
+               result_size, d_image.data);
 
-        d_pos[i].n = h_pos[i].n;
-        pos_size = h_pos[i].n * sizeof(float) * 2;
-        cudaMalloc(&d_pos[i].data, pos_size);
-        CUDA_CHECK_ERROR(return err);
-    }
+    info_print("Allocating memory for positions coordinates in device\n");
+
+    d_pos.n = h_pos->n;
+    pos_size = h_pos->n * sizeof(float) * 2;
+    cudaMalloc(&d_pos.data, pos_size * N);
+    CUDA_CHECK_ERROR(return err);
+
+    info_print("Grid and block sizes:\n");
+    dim3 dimBlock(8, 8);
+    dim3 dimGrid((h_image->width  + dimBlock.x - 1) / dimBlock.x,
+                 (h_image->height + dimBlock.y - 1) / dimBlock.y);
+
+    info_print("dimGrid: %dx%d\n", dimGrid.x, dimGrid.y);
+    info_print("dimBlock: %dx%d\n", dimBlock.x, dimBlock.y);
+
+    int offset_position = h_pos->n * 2;
+    int offset_image = h_image->width * h_image->height;
+
+    cudaMemcpy(d_pos.data, h_pos->data, pos_size * N, cudaMemcpyHostToDevice);
 
     info_print("Launching streams\n");
     for (int i = 0; i < N; i++)
     {
-        pos_size = h_pos[i].n * sizeof(float) * 2;
-        result_size = h_image[i].width * h_image[i].height * sizeof(float);
 
-        info_print("Grid and block sizes:\n");
-        dim3 dimBlock(8, 8);
-        dim3 dimGrid((h_image[i].width  + dimBlock.x - 1) / dimBlock.x,
-                     (h_image[i].height + dimBlock.y - 1) / dimBlock.y);
-
-        info_print("dimGrid: %dx%d\n", dimGrid.x, dimGrid.y);
-        info_print("dimBlock: %dx%d\n", dimBlock.x, dimBlock.y);
-
-        info_print("Asynchronous memcpy positions to device\n");
-        cudaMemcpyAsync(d_pos[i].data, h_pos[i].data, pos_size, cudaMemcpyHostToDevice, stream[i]);
-        CUDA_CHECK_ERROR(return err);
+//        info_print("Asynchronous memcpy positions to device\n");
+//        cudaMemcpyAsync(&d_pos.data[i * offset_position], &h_pos->data[i * offset_position],
+//                        pos_size, cudaMemcpyHostToDevice, stream[i]);
+//        CUDA_CHECK_ERROR(return err);
 
         info_print("Asynchronous kernel launch\n");
-        lutKernel2D <<<dimGrid, dimBlock, 0, stream[i]>>> (subpixel, d_image[i], d_pos[i], *h_psf, texObj);
+        lutKernel2D <<<dimGrid, dimBlock, 0, stream[i]>>> (subpixel, d_image, d_pos, *h_psf, texObj,
+                                                           offset_image * i, offset_position * i);
         CUDA_CHECK_ERROR(return err);
 
-        info_print("Asynchronous memcpy image to host\n");
-        cudaMemcpyAsync(h_image[i].data, d_image[i].data, result_size, cudaMemcpyDeviceToHost, stream[i]);
-        CUDA_CHECK_ERROR(return err);
+//        info_print("Asynchronous memcpy image to host\n");
+//        cudaMemcpyAsync(&h_image->data[i * offset_image], &d_image.data[i * offset_image],
+//                        result_size, cudaMemcpyDeviceToHost, stream[i]);
+//        CUDA_CHECK_ERROR(return err);
     }
 
     info_print("Device synchronize\n");
     cudaDeviceSynchronize();
     CUDA_CHECK_ERROR(return err);
+
+    cudaMemcpy(h_image->data, d_image.data, result_size * N, cudaMemcpyDeviceToHost);
 
     info_print("Destroying %d streams\n", N);
     for (int i = 0; i < N; i ++)
@@ -182,9 +185,6 @@ int lutConvolution2D(sImage2d * h_image, Positions2d * h_pos, sPSF * h_psf, int 
 
     info_print("Free device memory\n");
     free_texture(cuArray, &texObj);
-
-    free(d_image);
-    free(d_pos);
 
     info_print("Executing reset of device\n");
     cudaDeviceReset();

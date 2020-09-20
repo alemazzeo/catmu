@@ -21,8 +21,15 @@ def make_gaussian_psf_lut(psf_size: Tuple[int, int], sigma: float = 2.0) -> np.n
     return np.exp(-(x_psf ** 2 + y_psf ** 2) / sigma ** 2 / 2)
 
 
-def make_random_positions(n_sources: int = 6000, convolution_size: Tuple[int, int] = (64, 64)) -> np.ndarray:
+def make_random_positions(n_sources: int = 6000,
+                          convolution_size: Tuple[int, int] = (64, 64)) -> np.ndarray:
     return np.asarray(np.random.rand(n_sources, 2) * convolution_size)
+
+
+def make_n_random_positions(n: int = 100,
+                            n_sources: int = 6000,
+                            convolution_size: Tuple[int, int] = (64, 64)) -> np.ndarray:
+    return np.asarray(np.random.rand(n, n_sources, 2) * convolution_size)
 
 
 def convolve_guassian_psf(positions: np.ndarray, sigma: float = 2.0) -> np.ndarray:
