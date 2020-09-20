@@ -11,8 +11,8 @@ class sImage2d(Structure):
                 ("data", c_void_p)]
 
     @classmethod
-    def set_data(cls, image: np.ndarray,
-                 pixel_width: float = 1.0, pixel_height: float = 1.0):
+    def create(cls, image: np.ndarray,
+               pixel_width: float = 1.0, pixel_height: float = 1.0):
         structure = cls()
         structure.width = image.shape[1]
         structure.height = image.shape[0]
@@ -21,6 +21,20 @@ class sImage2d(Structure):
         structure.data = image.ctypes.data_as(c_void_p)
         return structure
 
+    def set_data(self, image: np.ndarray, pixel_width: float = 1.0, pixel_height: float = 1.0):
+        self.width = image.shape[1]
+        self.height = image.shape[0]
+        self.pixel_width = c_float(pixel_width)
+        self.pixel_height = c_float(pixel_height)
+        self.data = image.ctypes.data_as(c_void_p)
+
+    @classmethod
+    def array(cls, n: int = 1):
+        if isinstance(n, int):
+            return (cls * n)()
+        else:
+            raise TypeError
+
 
 class sPositions2d(Structure):
     """ Estructura de Ctypes para la lista de posiciones """
@@ -28,13 +42,26 @@ class sPositions2d(Structure):
                 ("data", c_void_p)]
 
     @classmethod
-    def set_data(cls, positions: np.ndarray):
+    def create(cls, positions: np.ndarray):
         structure = cls()
         if positions.ndim != 2:
             raise ValueError(f'positions.ndim = {positions.ndim} != 2\n')
         structure.n = positions.shape[0]
         structure.data = positions.ctypes.data_as(c_void_p)
         return structure
+
+    def set_data(self, positions: np.ndarray):
+        if positions.ndim != 2:
+            raise ValueError(f'positions.ndim = {positions.ndim} != 2\n')
+        self.n = positions.shape[0]
+        self.data = positions.ctypes.data_as(c_void_p)
+
+    @classmethod
+    def array(cls, n: int = 1):
+        if isinstance(n, int):
+            return (cls * n)()
+        else:
+            raise TypeError
 
 
 class sPSF(Structure):
@@ -46,8 +73,8 @@ class sPSF(Structure):
                 ("data", c_void_p),]
 
     @classmethod
-    def set_data(cls, psf_data: np.ndarray, 
-                 pixel_width: float = 1.0, pixel_height: float = 1.0):
+    def create(cls, psf_data: np.ndarray,
+               pixel_width: float = 1.0, pixel_height: float = 1.0):
         structure = cls()
         structure.width = psf_data.shape[1]
         structure.height = psf_data.shape[0]
@@ -56,6 +83,7 @@ class sPSF(Structure):
         structure.data = psf_data.ctypes.data_as(c_void_p)
 
         return structure
+
 
 # Punteros a cada tipo de estructura
 pImage2d = POINTER(sImage2d)

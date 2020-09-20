@@ -1,6 +1,6 @@
 import pathlib
-from ctypes import CDLL, c_int, c_float, POINTER
-from typing import Tuple
+from ctypes import CDLL, c_int, c_float, POINTER, byref, c_void_p
+from typing import Tuple, List, Union
 
 import numpy as np
 
@@ -12,7 +12,7 @@ MAKE_COMMAND = f'make -C {__here__ / "cuda_sources"} all'
 
 
 class ConvolveLibrary:
-    def __init__(self, kernel: str = 'v0_1',
+    def __init__(self,
                  image_size: Tuple[int, int] = (64, 64),
                  image_pixel_size: Tuple[float, float] = (1.0, 1.0),
                  psf_pixel_size: Tuple[float, float] = (1.0, 1.0),
@@ -21,8 +21,6 @@ class ConvolveLibrary:
 
         Parámetros
         ----------
-        kernel: str
-            Identificación del kernel seleccionado
         image_size: Tuple[int, int]
             Tamaño de la imagen de salida
         image_pixel_size: Tuple[float, float]
@@ -34,15 +32,11 @@ class ConvolveLibrary:
 
         """
 
-        self._kernel = pathlib.Path(__here__ / f'./cuda_sources/kernel_{kernel}.cu')
-
         if debug is True:
-            self._lib_name = pathlib.Path(__here__ / f'./bin/libConvolveLUT_D_{kernel}.so')
+            self._lib_name = pathlib.Path(__here__ / f'bin/libConvolveLUTd.so')
         else:
-            self._lib_name = pathlib.Path(__here__ / f'./bin/libConvolveLUT_{kernel}.so')
+            self._lib_name = pathlib.Path(__here__ / f'bin/libConvolveLUT.so')
 
-        if self._kernel.exists() is False:
-            raise FileNotFoundError(f'No se encontró el kernel {self._kernel}')
         if self._lib_name.exists() is False:
             import subprocess
             subprocess.run(MAKE_COMMAND, shell=True)
@@ -51,7 +45,7 @@ class ConvolveLibrary:
 
         self._lib = CDLL(self._lib_name)
 
-        self._lib.lutConvolution2D.argtypes = [POINTER(sImage2d), POINTER(sPositions2d), POINTER(sPSF), c_int]
+        self._lib.lutConvolution2D.argtypes = [c_void_p, c_void_p, POINTER(sPSF), c_int, c_int, c_int]
         self._lib.lutConvolution2D.restype = c_int
 
         self._image_size = None
@@ -68,7 +62,7 @@ class ConvolveLibrary:
 
     @property
     def kernel_name(self) -> str:
-        return f'kernel_{self._kernel}.cu'
+        return f'stable version'
 
     @property
     def image(self) -> np.ndarray:
@@ -84,7 +78,6 @@ class ConvolveLibrary:
             raise TypeError
         if self._image_size != new_size:
             self._image_size = new_size
-            self._image = np.zeros(self._image_size, dtype=c_float, order='c')
 
     @property
     def image_pixel_size(self) -> Tuple[float, float]:
@@ -109,15 +102,20 @@ class ConvolveLibrary:
             self._psf_pixel_size = new_size
 
     @property
-    def positions(self) -> np.ndarray:
+    def positions(self) -> List[np.ndarray]:
         return self._positions
 
     @positions.setter
-    def positions(self, new_positions):
-        if not isinstance(new_positions, np.ndarray):
+    def positions(self, new_positions: Union[np.ndarray, List[np.ndarray]]):
+        if isinstance(new_positions, np.ndarray):
+            new_positions = [new_positions]
+        elif isinstance(new_positions, list):
+            if not all([isinstance(x, np.ndarray) for x in new_positions]) is True:
+                raise TypeError
+        else:
             raise TypeError
-        if np.array_equal(self._positions, new_positions) is False:
-            self._positions = new_positions.astype(c_float, order='c', copy=True)
+
+        self._positions = [x.astype(c_float, order='c', copy=True) for x in new_positions]
 
     @property
     def psf(self) -> np.ndarray:
@@ -131,15 +129,26 @@ class ConvolveLibrary:
             self._psf = new_psf.astype(c_float, order='c', copy=True)
 
     def launch(self):
-        _image = sImage2d.create(self._image,
-                                 pixel_width=self.image_pixel_size[1],
-                                 pixel_height=self.image_pixel_size[0])
+
+        n = len(self._positions)
+        print(n)
+        self._image = [np.zeros(self._image_size, dtype=c_float, order='c') for _ in range(n)]
+
+        _image = sImage2d.array(n=n)
+        _positions = sPositions2d.array(n=n)
+
+        for i in range(n):
+            _image[i].set_data(self._image[i],
+                               pixel_width=self.image_pixel_size[1],
+                               pixel_height=self.image_pixel_size[0])
+
+            _positions[i].set_data(self._positions[i])
+
         _psf = sPSF.create(self._psf,
                            pixel_width=self._psf_pixel_size[1],
                            pixel_height=self._psf_pixel_size[0])
-        _positions = sPositions2d.create(self._positions)
 
-        r = self._lib.lutConvolution2D(_image, _positions, _psf, 0)
+        r = self._lib.lutConvolution2D(byref(_image), byref(_positions), _psf, n, 1, 0)
         if r != 0:
             if r == 100:
                 raise RuntimeError('No se encontró ninguna GPU disponible en el sistema\n\n'
@@ -150,20 +159,20 @@ class ConvolveLibrary:
 
 
 if __name__ == '__main__':
-    import matplotlib.pyplot as plt
+    # import matplotlib.pyplot as plt
     from catmu.analysis_tools import make_gaussian_psf_lut, make_random_positions
-    convolution_size = (64, 64)
+
+    convolution_size = (8, 8)
     image_pixel = (1.0, 1.0)
     psf_pixel = (1.0, 1.0)
-    psf_size = (25, 25)
-    n_sources = 6000
+    psf_size = (10, 10)
+    n_sources = 60000
     sigma = 2.0
 
-    pos = make_random_positions(n_sources=n_sources, convolution_size=convolution_size)
+    pos = [make_random_positions(n_sources=n_sources, convolution_size=(8, 8)) for i in range(3)]
     psf = make_gaussian_psf_lut(psf_size=psf_size, sigma=sigma)
 
-    convolution = ConvolveLibrary(kernel='v0_1',
-                                  image_size=convolution_size,
+    convolution = ConvolveLibrary(image_size=convolution_size,
                                   image_pixel_size=image_pixel,
                                   psf_pixel_size=psf_pixel,
                                   debug=False)
@@ -173,7 +182,6 @@ if __name__ == '__main__':
 
     convolution.launch()
 
-    # plt.imshow(convolution.image)
-    # plt.plot(pos[:, 0], pos[:, 1], color='k', ls='', marker='.', markersize=1.0)
+    # plt.imshow(convolution.image[5])
+    # plt.plot(pos[5][:, 0], pos[5][:, 1], color='k', ls='', marker='.', markersize=1.0)
     # plt.show()
-
