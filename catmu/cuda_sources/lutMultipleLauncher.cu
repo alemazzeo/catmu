@@ -28,7 +28,7 @@ __global__ void lutKernel2D(int sub_pixel, sImage2d image, Positions2d pos, sPSF
                     py = (y-pos.data[offset_position + i*2+1]) * factor_y + center_y;
                     pixel += tex2D<float>(texPSF, px, py);
                 }
-                image.data[offset_image + idy * image.width + idx] = pixel;
+                image.data[offset_image + y * image.width + x] = pixel;
             }
         }
     }

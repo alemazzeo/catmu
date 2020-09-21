@@ -161,24 +161,24 @@ class ConvolveLibraryMultiple:
 
 
 if __name__ == '__main__':
-    # import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
     from catmu.analysis_tools import make_gaussian_psf_lut, make_n_random_positions
     import time
 
-    convolution_size = (8, 8)
+    convolution_size = (64, 64)
     image_pixel = (1.0, 1.0)
     psf_pixel = (1.0, 1.0)
     psf_size = (10, 10)
     n_sources = 60000
     sigma = 2.0
 
-    pos = make_n_random_positions(n=100, n_sources=n_sources, convolution_size=(8, 8))
+    pos = make_n_random_positions(n=100, n_sources=n_sources, convolution_size=(64, 64))
     psf = make_gaussian_psf_lut(psf_size=psf_size, sigma=sigma)
 
     convolution = ConvolveLibraryMultiple(image_size=convolution_size,
                                           image_pixel_size=image_pixel,
                                           psf_pixel_size=psf_pixel,
-                                          subpixel=1,
+                                          subpixel=4,
                                           block_size=8,
                                           debug=False)
 
@@ -188,6 +188,6 @@ if __name__ == '__main__':
     t = time.time()
     convolution.launch()
     print(f'{(time.time() - t) * 1000}mS')
-    # plt.imshow(convolution.image[5])
-    # plt.plot(pos[5][:, 0], pos[5][:, 1], color='k', ls='', marker='.', markersize=1.0)
-    # plt.show()
+    plt.imshow(convolution.image[5])
+    plt.plot(pos[5][:, 0], pos[5][:, 1], color='k', ls='', marker='.', markersize=1.0)
+    plt.show()
