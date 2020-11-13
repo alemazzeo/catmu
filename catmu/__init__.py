@@ -1,1 +1,1 @@
-from .wrapper import ConvolutionManager, ConvolutionManagerInternalError
+from .api import ConvolutionManager, ConvolutionManagerInternalError

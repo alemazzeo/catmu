@@ -104,7 +104,7 @@ class ConvolutionManager:
                  device: int = 0,
                  block_size: int = 8,
                  n_streams: int = 100,
-                 sub_pixel: int = 1,
+                 patch_length: int = 1,
                  debug: bool = False):
 
         # Selecciona la biblioteca a utilizar (modo debug o no)
@@ -162,7 +162,7 @@ class ConvolutionManager:
 
         # Configuraciones de dispositivo y división interna del trabajo
         self._device = device
-        self._sub_pixel = sub_pixel
+        self._sub_pixel = patch_length
         self._block_size = block_size
         self._n_streams = n_streams
 
@@ -178,7 +178,7 @@ class ConvolutionManager:
     def loop_counter(self):
         return self._loop_counter
 
-    def setting(self,
+    def prepare(self,
                 psf: np.ndarray,
                 image_size: Tuple[int, int] = (64, 64),
                 image_pixel_size: Tuple[float, float] = (1.0, 1.0),

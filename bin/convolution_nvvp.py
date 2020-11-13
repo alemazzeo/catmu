@@ -24,10 +24,10 @@ psf = make_gaussian_psf_lut(psf_size=psf_size, sigma=sigma)
 convolution = ConvolutionManager(device=0,
                                  block_size=8,
                                  n_streams=10,
-                                 sub_pixel=1,
+                                 patch_length=1,
                                  debug=True)
 
-convolution.setting(psf=psf,
+convolution.prepare(psf=psf,
                     image_size=image_size,
                     image_pixel_size=image_pixel_size,
                     psf_pixel_size=psf_pixel_size)
@@ -39,7 +39,7 @@ for i in range(10):
 
 # Diez convoluciones reiniciando el contexto (como pasaba antes)
 for i in range(10):
-    convolution.setting(psf=psf,
+    convolution.prepare(psf=psf,
                         image_size=image_size,
                         image_pixel_size=image_pixel_size,
                         psf_pixel_size=psf_pixel_size)

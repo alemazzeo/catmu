@@ -29,21 +29,21 @@ try:
     convolution_gpu_0 = ConvolutionManager(device=0,
                                            block_size=8,
                                            n_streams=10,
-                                           sub_pixel=1,
+                                           patch_length=1,
                                            debug=False)
 
     convolution_gpu_1 = ConvolutionManager(device=1,
                                            block_size=8,
                                            n_streams=10,
-                                           sub_pixel=1,
+                                           patch_length=1,
                                            debug=False)
 
-    convolution_gpu_0.setting(psf=psf,
+    convolution_gpu_0.prepare(psf=psf,
                               image_size=image_size,
                               image_pixel_size=image_pixel_size,
                               psf_pixel_size=psf_pixel_size)
 
-    convolution_gpu_1.setting(psf=psf,
+    convolution_gpu_1.prepare(psf=psf,
                               image_size=image_size,
                               image_pixel_size=image_pixel_size,
                               psf_pixel_size=psf_pixel_size)
