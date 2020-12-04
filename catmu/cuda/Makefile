@@ -1,10 +1,10 @@
-NVCC_FLAGS = -rdc=true
-NVCC_XFLAGS = -Xcompiler -fPIC -shared
+NVCC_FLAGS = -rdc=true -lgomp
+NVCC_XFLAGS = -Xcompiler -fPIC -Xcompiler -fopenmp -shared
 
-all: libConvolveLUT.so libConvolveLUTd.so
+all: libConvolve.so libConvolveDebug.so
 
-libConvolveLUT.so: lutConvolution.cu
+libConvolve.so: lutConvolution.cu exprConvolution.cu
 	nvcc $(NVCC_FLAGS) $^ $(NVCC_XFLAGS) -o $@
 
-libConvolveLUTd.so: lutConvolution.cu
+libConvolveDebug.so: lutConvolution.cu exprConvolution.cu
 	nvcc $(NVCC_FLAGS) $^ -DDEBUG $(NVCC_XFLAGS) -o $@

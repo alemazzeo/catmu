@@ -1,0 +1,4 @@
+graft bin
+graft catmu
+global-exclude *.so
+global-exclude *.py[co]

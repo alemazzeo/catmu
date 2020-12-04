@@ -33,50 +33,78 @@
         }} while(0)
 
 // # ESTRUCTURA para la imagen convolucionada (resultado final)
-typedef struct sImage2d{
+typedef struct sImage{
     int N;
     int width;
     int height;
+    int depth;
     float pixel_width;
     float pixel_height;
+    float pixel_depth;
     float * data;
     size_t allocated_size;
-} sImage2d;
+} sImage;
 
 // # ESTRUCTURA para la lista de posiciones 2D
-typedef struct sPositions2d{
+typedef struct sPositions{
     int N;
     int n;
+    int dim;
     float * data;
     size_t allocated_size;
-} Positions2d;
+} sPositions2d;
 
 // # ESTRUCTURA para la LUT de la PSF
-typedef struct sPSF{
+typedef struct sLutPSF{
     int width;
     int height;
+    int depth;
+    int dim;
     float pixel_width;
     float pixel_height;
+    float pixel_depth;
     float * data;
     size_t allocated_size;
-} sPSF;
+} sLutPSF2d;
+
+// # ESTRUCTURA para PSF por expresión
+typedef struct sExpressionPSF{
+    int id_function;
+    int n_params;
+    double * params;
+    size_t allocated_size;
+} sExpressionPSF;
 
 // # ESTRUCTURA para las configuraciones generales
 typedef struct sConfig{
     int device;
-    int sub_pixel;
     int block_size;
     int n_streams;
 } sConfig;
 
+typedef struct cudaDevicePropCatmu {
+    char name[256];
+    int multiProcessorCount;
+    size_t totalGlobalMem;
+    size_t sharedMemPerBlock;
+    int major;
+    int minor;
+    int regsPerBlock;
+    int warpSize;
+    size_t memPitch;
+    int maxThreadsPerBlock;
+    int maxThreadsDim[3];
+    int maxGridSize[3];
+    int clockRate;
+    size_t totalConstMem;
+    size_t textureAlignment;
+    int deviceOverlap;
+    int kernelExecTimeoutEnabled;
+} cudaDevicePropCatmu;
+
 
 // Tipo de función para el callback
 typedef bool callback(double elapsed_time, unsigned long loop_counter);
-
-// Callback que inmediatamente devuelve true (anula el callback)
-bool dummy_callback(double elapsed_time, unsigned long loop_counter){
-    return true;
-}
 
 // Función para PSF por expresión
 typedef float psf_function(float x, float y, float * params);
@@ -85,14 +113,23 @@ typedef float psf_function(float x, float y, float * params);
 
 int set_device(int device);
 
-int set_texture_2d(cudaArray * cuArray, sPSF * psf, cudaTextureObject_t * texObj, bool normalized);
+int set_texture_2d(cudaArray * cuArray, sLutPSF * psf,
+                   cudaTextureObject_t * texObj, bool normalized);
+int set_texture_3d(cudaArray * cuArray, sLutPSF * psf,
+                   cudaTextureObject_t * texObj, bool normalized);
 
-int set_images_2d(sImage2d * h_image, sImage2d * d_image);
-int set_positions_2d(Positions2d * h_pos, sPositions2d * d_pos);
+int set_images(sImage * h_image, sImage * d_image);
+int set_positions(sPositions * h_pos, sPositions * d_pos);
+int upload_positions(sPositions * h_pos, sPositions * d_pos);
+int upload_params(sExpressionPSF * h_params, sExpressionPSF * d_params);
+int download_results(sImage * h_image, sImage * d_image);
 
-double get_T(sPSF * psf, int x, int y);
-double cpu_tex2d(sPSF * psf, float x, float y);
-int rmse(sImage2d method1, sImage2d method2, float * result);
+int free_device_memory(sImage * d_image, sPositions * d_pos,
+                       cudaTextureObject_t * texObj, cudaArray * cuArray);
+
+double get_T(sLutPSF * psf, int x, int y);
+double cpu_tex2d(sLutPSF * psf, float x, float y);
+int rmse(sImage method1, sImage method2, float * result);
 
 float gaussian_2d(float x, float y, float * params);
-int evaluate_psf_2d(sPSF * psf, float amplitude, float sigma);
+int evaluate_psf_2d(sLutPSF * psf, float amplitude, float sigma);

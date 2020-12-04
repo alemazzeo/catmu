@@ -7,7 +7,8 @@
 """
 
 import matplotlib.pyplot as plt
-from catmu import ConvolutionManager, ConvolutionManagerInternalError
+
+from catmu import ConvolutionManagerGPU, CatmuError
 from catmu.analysis_tools import make_gaussian_psf_lut, make_n_random_positions
 
 # En este ejemplo n corresponde al trabajo de cada GPU
@@ -26,29 +27,27 @@ pos2 = make_n_random_positions(n=n, n_sources=n_sources, convolution_size=image_
 psf = make_gaussian_psf_lut(psf_size=psf_size, sigma=sigma)
 
 try:
-    convolution_gpu_0 = ConvolutionManager(device=0,
-                                           block_size=8,
-                                           n_streams=10,
-                                           patch_length=1,
-                                           debug=False)
+    convolution_gpu_0 = ConvolutionManagerGPU(device=0,
+                                              block_size=8,
+                                              n_streams=10,
+                                              debug=False)
 
-    convolution_gpu_1 = ConvolutionManager(device=1,
-                                           block_size=8,
-                                           n_streams=10,
-                                           patch_length=1,
-                                           debug=False)
+    convolution_gpu_1 = ConvolutionManagerGPU(device=1,
+                                              block_size=8,
+                                              n_streams=10,
+                                              debug=False)
 
-    convolution_gpu_0.prepare(psf=psf,
-                              image_size=image_size,
-                              image_pixel_size=image_pixel_size,
-                              psf_pixel_size=psf_pixel_size)
+    convolution_gpu_0.prepare_lut_psf(psf=psf,
+                                      image_size=image_size,
+                                      image_pixel_size=image_pixel_size,
+                                      psf_pixel_size=psf_pixel_size)
 
-    convolution_gpu_1.prepare(psf=psf,
-                              image_size=image_size,
-                              image_pixel_size=image_pixel_size,
-                              psf_pixel_size=psf_pixel_size)
+    convolution_gpu_1.prepare_lut_psf(psf=psf,
+                                      image_size=image_size,
+                                      image_pixel_size=image_pixel_size,
+                                      psf_pixel_size=psf_pixel_size)
 
-except ConvolutionManagerInternalError as e:
+except CatmuError as e:
     if e.code == 101:
         print("Prueba abortada: No se dispone de dos GPUs en el sistema")
         exit()

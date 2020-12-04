@@ -6,10 +6,10 @@
     :license: BSD, see LICENSE for more details.
 """
 
-from catmu import ConvolutionManager
+from catmu import ConvolutionManagerGPU
 from catmu.analysis_tools import make_gaussian_psf_lut, make_n_random_positions
 
-n = 2
+n = 100
 image_size = (64, 64)
 image_pixel_size = (1.0, 1.0)
 psf_pixel_size = (1.0, 1.0)
@@ -21,16 +21,15 @@ pos = make_n_random_positions(n=n, n_sources=n_sources, convolution_size=image_s
 
 psf = make_gaussian_psf_lut(psf_size=psf_size, sigma=sigma)
 
-convolution = ConvolutionManager(device=0,
-                                 block_size=8,
-                                 n_streams=10,
-                                 patch_length=1,
-                                 debug=True)
+convolution = ConvolutionManagerGPU(device=0,
+                                    block_size=8,
+                                    n_streams=10,
+                                    debug=False)
 
-convolution.prepare(psf=psf,
-                    image_size=image_size,
-                    image_pixel_size=image_pixel_size,
-                    psf_pixel_size=psf_pixel_size)
+convolution.prepare_lut_psf(psf=psf,
+                            image_size=image_size,
+                            image_pixel_size=image_pixel_size,
+                            psf_pixel_size=psf_pixel_size)
 
 # Diez convoluciones utilizando el mismo contexto
 for i in range(10):
@@ -39,9 +38,22 @@ for i in range(10):
 
 # Diez convoluciones reiniciando el contexto (como pasaba antes)
 for i in range(10):
-    convolution.prepare(psf=psf,
-                        image_size=image_size,
-                        image_pixel_size=image_pixel_size,
-                        psf_pixel_size=psf_pixel_size)
+    convolution.prepare_lut_psf(psf=psf,
+                                image_size=image_size,
+                                image_pixel_size=image_pixel_size,
+                                psf_pixel_size=psf_pixel_size)
+    results = convolution.sync_convolve(positions=pos)
+    print(f'{convolution.loop_counter} -> {convolution.last_elapsed_time * 1000}mS')
+
+convolution.prepare_expression_psf(id_function=0, params=[1.0, 2.0, 0.0])
+
+# Diez convoluciones utilizando el mismo contexto
+for i in range(10):
+    results = convolution.sync_convolve(positions=pos)
+    print(f'{convolution.loop_counter} -> {convolution.last_elapsed_time * 1000}mS')
+
+# Diez convoluciones reiniciando el contexto (como pasaba antes)
+for i in range(10):
+    convolution.prepare_expression_psf(id_function=0, params=[1.0, 2.0, 0.0])
     results = convolution.sync_convolve(positions=pos)
     print(f'{convolution.loop_counter} -> {convolution.last_elapsed_time * 1000}mS')
