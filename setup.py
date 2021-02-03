@@ -4,8 +4,8 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="catmu-alemazzeo", # Replace with your own username
-    version="0.0.1",
+    name="catmu",
+    version="0.1.0",
     author="Alejandro Ezequiel Mazzeo",
     author_email="ale.exactas@gmail.com",
     description="Convolution Accelerated by a Texture Mapping Unit",
