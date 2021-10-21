@@ -2,7 +2,7 @@
 
 ### Convolución Acelerada por la Unidad de Mapeo de Texturas
 
-##### Requisitos (incompleto):
+##### Requisitos:
 
   * Dispositivo compatible con CUDA 9.1 o superior
   * Compilador de CUDA nvcc en versión 9.1 o superior con ruta incluida en el sistema.
